@@ -1,0 +1,107 @@
+#include "Surface.h"
+#include <assert.h> 
+#include "ChiliWin.h"
+#include <fstream>
+
+Surface::Surface(const std::string filename)
+{
+	std::ifstream file(filename, std::ios::binary);
+	assert(file);
+	BITMAPFILEHEADER bmFileHeader;
+
+	file.read(reinterpret_cast<char*>(&bmFileHeader), sizeof(bmFileHeader));
+
+	BITMAPINFOHEADER bmInfoHeader;
+	file.read(reinterpret_cast<char*>(&bmInfoHeader), sizeof(bmInfoHeader));
+
+	assert(bmInfoHeader.biBitCount == 24);
+	assert(bmInfoHeader.biCompression == BI_RGB);
+	
+	width = bmInfoHeader.biWidth;
+	height = bmInfoHeader.biHeight;
+
+	pixels = new Color[width * height];
+
+	file.seekg(bmFileHeader.bfOffBits);
+
+	const int padding = (4 - (width * 3) % 4) % 4;
+
+	for (int y = height-1; y >=0; y--)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			PutPixel(x, y, Color(file.get(), file.get(), file.get() ));
+			
+		}
+		file.seekg(padding, std::ios::cur);
+	}
+
+}
+
+Surface::Surface(int width, int height)
+	:
+	width(width),
+	height(height),
+	pixels( new Color[width*height])
+{
+
+}
+
+Surface::Surface(const Surface& s)
+{
+	*this = s;
+}
+
+Surface::~Surface()
+{
+	delete[] pixels;
+	pixels = nullptr;
+}
+
+Surface& Surface::operator=(const Surface& s)
+{
+	width = s.GetWidth();
+	height = s.GetHeight();
+
+	delete[] pixels;
+	pixels = new Color[width * height];
+
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			this->PutPixel(i, j, s.GetPixel(i, j));
+		}
+	}
+	return *this;
+}
+
+void Surface::PutPixel(int x, int y, Color c)
+{
+	assert(x >= 0);
+	assert(y >= 0);
+	assert(x < width);
+	assert(y < height);
+
+	pixels[y * width + x] = c;
+}
+
+Color Surface::GetPixel(int x, int y) const
+{
+	assert(x >= 0);
+	assert(y >= 0);
+	assert(x < width);
+	assert(y < height);
+
+	return pixels[y*width+x];
+}
+
+int Surface::GetWidth() const
+{
+	return width;
+}
+
+int Surface::GetHeight() const
+{
+	return height;
+}
