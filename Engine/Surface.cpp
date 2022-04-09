@@ -14,11 +14,28 @@ Surface::Surface(const std::string filename)
 	BITMAPINFOHEADER bmInfoHeader;
 	file.read(reinterpret_cast<char*>(&bmInfoHeader), sizeof(bmInfoHeader));
 
-	assert(bmInfoHeader.biBitCount == 24);
+	assert(bmInfoHeader.biBitCount == 24 || bmInfoHeader.biBitCount==32);
 	assert(bmInfoHeader.biCompression == BI_RGB);
 	
+	int yStart;
+	int yEnd;
+	int dy;
+
 	width = bmInfoHeader.biWidth;
-	height = bmInfoHeader.biHeight;
+
+	if (bmInfoHeader.biHeight<0) {
+		height = -bmInfoHeader.biHeight;
+		yStart = 0;
+		yEnd = height;
+		dy = 1;
+	}
+	else
+	{
+		height = bmInfoHeader.biHeight;
+		yStart = height-1;
+		yEnd = -1;
+		dy = -1;
+	}
 
 	pixels = new Color[width * height];
 
@@ -26,14 +43,21 @@ Surface::Surface(const std::string filename)
 
 	const int padding = (4 - (width * 3) % 4) % 4;
 
-	for (int y = height-1; y >=0; y--)
+	for (int y = yStart; dy > 0 ? y < yEnd : y > yEnd; y+=dy)
 	{
 		for (int x = 0; x < width; x++)
 		{
-			PutPixel(x, y, Color(file.get(), file.get(), file.get() ));
-			
+			if (bmInfoHeader.biBitCount == 24) {
+				PutPixel(x, y, Color(file.get(), file.get(), file.get()));
+			}
+			else if (bmInfoHeader.biBitCount == 32) {
+				PutPixel(x, y, Color(file.get(), file.get(), file.get(), file.get()));
+			}
 		}
-		file.seekg(padding, std::ios::cur);
+
+		if (bmInfoHeader.biBitCount != 32) {
+			file.seekg(padding, std::ios::cur);
+		}
 	}
 
 }
